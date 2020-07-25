@@ -1,7 +1,7 @@
 const dotenv = require('dotenv')
 const express = require('express')
 const mongodb = require('mongodb')
-
+const mongoOptions = {useUnifiedTopology: true}
 const { getPutBodyIsAllowed } = require('./util')
 
 dotenv.config()
@@ -15,10 +15,52 @@ const uri = process.env.DATABASE_URI
 
 app.post('/api/books', function(request, response) {
   // Make this work!
+  const client = new mongodb.MongoClient(uri, mongoOptions);
+  const book = {
+    title: request.body.title,
+    author: request.body.author,
+    author_birth_year: Number(request.body.author_birth_year),
+    author_death_year: Number(request.body.author_death_year),
+    url: request.body.url
+  }
+  client.connect(function () {
+    const db = client.db('literature')
+    const collection = db.collection('books')
+
+   collection.insertOne(book, function(error, result){
+     response.send(error||result.ops[0]);
+     client.close();
+
+   })
+  })
 })
 
 app.delete('/api/books/:id', function(request, response) {
   // Make this work, too!
+  const client = new mongodb.MongoClient(uri, mongoOptions);
+  
+if (!mongodb.ObjectId.isValid(request.params.id)){
+  response.sendStatus(400);
+  return
+}
+
+  client.connect(function() {
+    const db = client.db("literature");
+    const collection = db.collection("books")
+    const deleteObject = {_id: mongodb.ObjectId(request.params.id)};
+
+    collection.deleteOne(deleteObject, function (error, result){
+      if (error){
+        response.status(500).send(error);
+      }else if (result.deletedCount) {
+        response.sendStatus(204);
+      } else {
+        response.sendStatus(404);
+      }
+      client.close();
+      
+    })
+  })
 })
 
 app.put('/api/books/:id', function(request, response) {
