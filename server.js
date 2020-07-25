@@ -38,7 +38,7 @@ app.post('/api/books', function(request, response) {
 app.delete('/api/books/:id', function(request, response) {
   // Make this work, too!
   const client = new mongodb.MongoClient(uri, mongoOptions);
-  
+
 if (!mongodb.ObjectId.isValid(request.params.id)){
   response.sendStatus(400);
   return
@@ -65,6 +65,41 @@ if (!mongodb.ObjectId.isValid(request.params.id)){
 
 app.put('/api/books/:id', function(request, response) {
   // Also make this work!
+  const client = new mongodb.MongoClient(uri, mongoOptions);
+
+  if (!mongodb.ObjectId.isValid(request.params.id)) {
+    response.sendStatus(420);
+    return
+  }
+  client.connect(function () {
+    const db = client.db("literature");
+    const collection = db.collection("books")
+    const searchObject = { _id: mongodb.ObjectId(request.params.id) };
+
+    const updateObject = {
+      $set:{
+        title: request.body.title,
+        author: request.body.author,
+        author_birth_year: Number(request.body.author_birth_year),
+        author_death_year: Number(request.body.author_death_year),
+        url: request.body.url
+      }
+    };
+
+    const options = {returnOriginal : false};
+
+    collection.findOneAndUpdate(searchObject, updateObject, options, function(error, result){
+      if (result.value){
+        response.send(result.value)
+      }else if (error){
+response.status(503).send(error);
+      }else{
+        response.sendStatus(404);
+      }
+      client.close
+      })
+    })
+
 })
 
 app.get('/api/books', function(request, response) {
